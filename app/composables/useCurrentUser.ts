@@ -1,6 +1,6 @@
 import type { SessionUser } from "../../server/auth"
 
-type MeResponse = { user: SessionUser } | null
+type MeResponse = { user: SessionUser | null }
 
 // SSR-friendly read of the signed-in user. Hits /api/me, forwards the cookie
 // during server render, and caches under one key so pages and the layout share

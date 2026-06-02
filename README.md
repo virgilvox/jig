@@ -6,7 +6,7 @@ An opinionated full-stack template you clone, rename, and ship. Auth, data, comp
 
 - Nuxt 4 (Vue 3, TypeScript strict), server and client as one Node deployable.
 - Postgres through Drizzle. Schema as code, readable migrations, a typed client.
-- better-auth on a Nitro route: email and password, GitHub OAuth, passkeys, password reset and email verification through Resend, server sessions, route guard.
+- better-auth on a Nitro route: email and password, GitHub OAuth, passkeys, password reset and email verification through Resend, organization and multi-tenant primitives, server sessions, route guard.
 - A base component set on Reka UI primitives, every value pulled from design tokens.
 - A token-based design system with three themes. Swap the look with one attribute.
 - One Dockerfile and one docker-compose for app and database.
@@ -75,7 +75,7 @@ Three ship pre-built: `punk-zine`, `industrial`, `paper-teal`. Adding a fourth i
 
 ## Deploy
 
-`npm run build` emits a plain Node server at `.output/server/index.mjs`. The Dockerfile builds it; `docker compose --profile full up` runs app and database together.
+`npm run build` emits a plain Node server at `.output/server/index.mjs`. The Dockerfile builds it; `docker compose --profile full up` runs app and database together. See [docs/deploy.md](docs/deploy.md) for the full recipe: env, migrations as a release step, and a checklist.
 
 ## License
 

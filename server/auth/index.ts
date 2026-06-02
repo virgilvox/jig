@@ -1,11 +1,18 @@
 import { betterAuth } from "better-auth"
 import { drizzleAdapter } from "better-auth/adapters/drizzle"
+import { organization } from "better-auth/plugins"
 import { passkey } from "@better-auth/passkey"
 import { db } from "../db/client"
 import * as schema from "../db/schema"
 import { sendEmail } from "./email"
 
 const baseURL = process.env.BETTER_AUTH_URL ?? "http://localhost:3000"
+
+// Sessions are signed with this secret. An empty secret in production would let
+// anyone forge a session, so fail fast instead of booting insecure.
+if (process.env.NODE_ENV === "production" && !process.env.BETTER_AUTH_SECRET) {
+  throw new Error("BETTER_AUTH_SECRET must be set in production.")
+}
 
 type OAuthCredentials = { clientId: string; clientSecret: string }
 
@@ -32,6 +39,10 @@ export const auth = betterAuth({
     // WebAuthn passkeys. rpID is the domain the credential is bound to; it is
     // the hostname of the base URL, so localhost in dev and your domain in prod.
     passkey({ rpName: "JIG", rpID: new URL(baseURL).hostname, origin: baseURL }),
+    // Multi-tenant primitives: organizations, members, invitations. Available
+    // but never forced. The example notes app stays single-user; wire your own
+    // data to the active organization when a product needs tenancy.
+    organization(),
   ],
   emailAndPassword: {
     enabled: true,

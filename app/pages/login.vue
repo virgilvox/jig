@@ -56,6 +56,12 @@ async function onSubmit(): Promise<void> {
   const { error } = await authClient.signIn.email({ email: email.value, password: password.value })
   loading.value = false
   if (error) {
+    // 403 here means the email is not verified. Send them to confirm it
+    // instead of a dead-end error, where they can resend the link.
+    if (error.status === 403) {
+      await navigateTo(`/verify-email?email=${encodeURIComponent(email.value)}`)
+      return
+    }
     push({
       title: "Could not sign in",
       description: error.message ?? "Check your details.",

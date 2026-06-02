@@ -42,6 +42,7 @@ async function logout(): Promise<void> {
 
 const menuItems = computed<DropdownItem[]>(() => [
   { label: "Dashboard", onSelect: () => navigateTo("/dashboard") },
+  { label: "Organizations", onSelect: () => navigateTo("/organizations") },
   { label: "Account", onSelect: () => navigateTo("/account") },
   { separator: true },
   { label: "Log out", onSelect: logout, danger: true },
