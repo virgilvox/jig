@@ -42,7 +42,20 @@ export const auth = betterAuth({
     // Multi-tenant primitives: organizations, members, invitations. Available
     // but never forced. The example notes app stays single-user; wire your own
     // data to the active organization when a product needs tenancy.
-    organization(),
+    organization({
+      // Match the email-verification stance: when verification is required,
+      // an invitee must verify before accepting; otherwise a fresh clone can
+      // accept invitations without email set up.
+      requireEmailVerificationOnInvitation: process.env.REQUIRE_EMAIL_VERIFICATION === "true",
+      sendInvitationEmail: async (data) => {
+        const url = `${baseURL}/accept-invitation?id=${data.id}`
+        await sendEmail({
+          to: data.email,
+          subject: `Join ${data.organization.name}`,
+          body: `You have been invited to join ${data.organization.name}. Accept here: ${url}`,
+        })
+      },
+    }),
   ],
   emailAndPassword: {
     enabled: true,

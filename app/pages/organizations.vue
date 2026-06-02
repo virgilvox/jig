@@ -36,6 +36,10 @@
       </UiTable>
       <p v-else class="text-muted">No organizations yet. Create one above.</p>
     </UiCard>
+
+    <UiCard v-if="activeId" title="Members" subtitle="Manage the active organization.">
+      <OrgMembers :organization-id="activeId" />
+    </UiCard>
   </section>
 </template>
 

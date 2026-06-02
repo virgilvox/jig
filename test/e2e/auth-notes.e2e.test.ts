@@ -22,14 +22,18 @@ function cookieHeader(res: Response): string {
     .join("; ")
 }
 
-async function signUp(tag: string): Promise<string> {
+async function signUpEmail(address: string, name: string): Promise<string> {
   const res = await fetch("/api/auth/sign-up/email", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ name: tag, email: email(tag), password: PASSWORD }),
+    body: JSON.stringify({ name, email: address, password: PASSWORD }),
   })
   expect(res.status).toBe(200)
   return cookieHeader(res)
+}
+
+async function signUp(tag: string): Promise<string> {
+  return signUpEmail(email(tag), tag)
 }
 
 if (!databaseUrl) {
@@ -113,6 +117,43 @@ if (!databaseUrl) {
       expect(res.status).toBe(200)
       const org = (await res.json()) as { slug: string }
       expect(org.slug).toBe(`acme-${stamp}`)
+    })
+
+    it("invites a member and lets the invited user accept", async () => {
+      const inviterCookie = await signUp("inviter")
+      const orgRes = await fetch("/api/auth/organization/create", {
+        method: "POST",
+        headers: { "content-type": "application/json", cookie: inviterCookie, origin: ORIGIN },
+        body: JSON.stringify({ name: "Members Org", slug: `members-${stamp}` }),
+      })
+      expect(orgRes.status).toBe(200)
+      const org = (await orgRes.json()) as { id: string }
+
+      const inviteeEmail = email("invitee")
+      const inviteRes = await fetch("/api/auth/organization/invite-member", {
+        method: "POST",
+        headers: { "content-type": "application/json", cookie: inviterCookie, origin: ORIGIN },
+        body: JSON.stringify({ email: inviteeEmail, role: "member", organizationId: org.id }),
+      })
+      expect(inviteRes.status).toBe(200)
+      const invite = (await inviteRes.json()) as { id: string }
+      expect(invite.id).toBeTruthy()
+
+      // The invited user signs up with the same email, then accepts.
+      const inviteeCookie = await signUpEmail(inviteeEmail, "Invitee")
+      const acceptRes = await fetch("/api/auth/organization/accept-invitation", {
+        method: "POST",
+        headers: { "content-type": "application/json", cookie: inviteeCookie, origin: ORIGIN },
+        body: JSON.stringify({ invitationId: invite.id }),
+      })
+      expect(acceptRes.status).toBe(200)
+
+      const full = (await (
+        await fetch(`/api/auth/organization/get-full-organization?organizationId=${org.id}`, {
+          headers: { cookie: inviterCookie, origin: ORIGIN },
+        })
+      ).json()) as { members: Array<{ role: string }> }
+      expect(full.members.length).toBe(2)
     })
   })
 }
