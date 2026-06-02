@@ -19,11 +19,12 @@ npm install
 docker compose up -d db       # local Postgres on :5432
 npm run db:generate           # build the first migration from the schema
 npm run db:migrate            # apply it
-npm run db:seed               # optional sample data
 npm run dev                   # http://localhost:3000
 ```
 
 Sign up, and you land on the dashboard looking at your own notes. That is the whole point.
+
+Want sample data? After signing up, run `npm run db:seed`. It attaches a couple of categories and notes to your account (the most recent user, or set `SEED_USER_EMAIL`), so they show up on your dashboard.
 
 ## Rename it
 
