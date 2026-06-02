@@ -1,6 +1,6 @@
 <template>
   <div class="flex flex-col gap-5">
-    <form class="flex items-end gap-2" @submit.prevent="invite">
+    <form v-if="canManage" class="flex items-end gap-2" @submit.prevent="invite">
       <div class="flex-1">
         <UiFormField label="Invite by email" for="invite-email">
           <template #default="{ id }">
@@ -13,7 +13,7 @@
           </template>
         </UiFormField>
       </div>
-      <UiSelect v-model="inviteRole" :options="roleOptions" aria-label="Role" class="w-32" />
+      <UiSelect v-model="inviteRole" :options="roleOptions" aria-label="Invite role" class="w-32" />
       <UiButton type="submit" :disabled="inviting || !inviteEmail.trim()">
         {{ inviting ? "Inviting..." : "Invite" }}
       </UiButton>
@@ -27,9 +27,23 @@
             {{ m.user.name || m.user.email }}
             <p v-if="m.user.name" class="text-sm text-muted">{{ m.user.email }}</p>
           </td>
-          <td class="text-muted">{{ m.role }}</td>
+          <td>
+            <UiSelect
+              v-if="canManage && m.role !== 'owner'"
+              :model-value="m.role"
+              :options="roleOptions"
+              :aria-label="`Role for ${m.user.email}`"
+              class="w-32"
+              @update:model-value="(role) => changeRole(m, role)"
+            />
+            <span v-else class="text-muted">{{ m.role }}</span>
+          </td>
           <td class="text-right">
-            <UiButton v-if="m.role !== 'owner'" variant="ghost" @click="remove(m.user.email)">
+            <UiButton
+              v-if="canManage && m.role !== 'owner'"
+              variant="ghost"
+              @click="remove(m.user.email)"
+            >
               Remove
             </UiButton>
           </td>
@@ -37,7 +51,7 @@
       </UiTable>
     </div>
 
-    <div v-if="invites.length">
+    <div v-if="canManage && invites.length">
       <h3 class="mb-2 font-display text-sm font-semibold text-muted">Pending invitations</h3>
       <UiTable :columns="['Email', 'Role', '']">
         <tr v-for="inv in invites" :key="inv.id">
@@ -53,11 +67,17 @@
 </template>
 
 <script setup lang="ts">
-type Member = { id: string; role: string; user: { email: string; name: string } }
+type Member = { id: string; userId: string; role: string; user: { email: string; name: string } }
 type Invite = { id: string; email: string; role: string | null; status: string }
 
 const props = defineProps<{ organizationId: string }>()
 const { push } = useToast()
+
+// Read the cached session (the default layout populates it) to find the caller's
+// role, so management controls only show to an owner or admin. The API enforces
+// this too; hiding the controls keeps the UI from offering actions that 403.
+const session = useNuxtData<{ user: { id: string } | null }>("current-session")
+const currentUserId = computed<string>(() => session.data.value?.user?.id ?? "")
 
 const members = ref<Member[]>([])
 const invites = ref<Invite[]>([])
@@ -69,6 +89,11 @@ const roleOptions = [
   { label: "Member", value: "member" },
   { label: "Admin", value: "admin" },
 ]
+
+const myRole = computed<string>(
+  () => members.value.find((m) => m.userId === currentUserId.value)?.role ?? "",
+)
+const canManage = computed<boolean>(() => myRole.value === "owner" || myRole.value === "admin")
 
 async function load(): Promise<void> {
   const full = await authClient.organization.getFullOrganization({
@@ -103,6 +128,19 @@ async function invite(): Promise<void> {
   inviteEmail.value = ""
   await load()
   push({ title: "Invitation sent" })
+}
+
+async function changeRole(member: Member, role: string | undefined): Promise<void> {
+  if (!role || role === member.role) return
+  const { error } = await authClient.organization.updateMemberRole({
+    memberId: member.id,
+    role: role as "member" | "admin",
+    organizationId: props.organizationId,
+  })
+  if (error) {
+    push({ title: "Could not change role", variant: "danger" })
+  }
+  await load()
 }
 
 async function remove(emailOrId: string): Promise<void> {

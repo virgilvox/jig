@@ -155,5 +155,73 @@ if (!databaseUrl) {
       ).json()) as { members: Array<{ role: string }> }
       expect(full.members.length).toBe(2)
     })
+
+    it("promotes an accepted member to a new role", async () => {
+      const inviterCookie = await signUp("roleowner")
+      const orgRes = await fetch("/api/auth/organization/create", {
+        method: "POST",
+        headers: { "content-type": "application/json", cookie: inviterCookie, origin: ORIGIN },
+        body: JSON.stringify({ name: "Role Org", slug: `role-${stamp}` }),
+      })
+      const org = (await orgRes.json()) as { id: string }
+
+      const memberEmail = email("rolemember")
+      const inviteRes = await fetch("/api/auth/organization/invite-member", {
+        method: "POST",
+        headers: { "content-type": "application/json", cookie: inviterCookie, origin: ORIGIN },
+        body: JSON.stringify({ email: memberEmail, role: "member", organizationId: org.id }),
+      })
+      const invite = (await inviteRes.json()) as { id: string }
+      const memberCookie = await signUpEmail(memberEmail, "Role Member")
+      await fetch("/api/auth/organization/accept-invitation", {
+        method: "POST",
+        headers: { "content-type": "application/json", cookie: memberCookie, origin: ORIGIN },
+        body: JSON.stringify({ invitationId: invite.id }),
+      })
+
+      const fullUrl = `/api/auth/organization/get-full-organization?organizationId=${org.id}`
+      const before = (await (
+        await fetch(fullUrl, { headers: { cookie: inviterCookie, origin: ORIGIN } })
+      ).json()) as { members: Array<{ id: string; role: string; user: { email: string } }> }
+      const member = before.members.find((m) => m.user.email === memberEmail)
+      expect(member).toBeDefined()
+
+      const upd = await fetch("/api/auth/organization/update-member-role", {
+        method: "POST",
+        headers: { "content-type": "application/json", cookie: inviterCookie, origin: ORIGIN },
+        body: JSON.stringify({ memberId: member?.id, role: "admin", organizationId: org.id }),
+      })
+      expect(upd.status).toBe(200)
+
+      const after = (await (
+        await fetch(fullUrl, { headers: { cookie: inviterCookie, origin: ORIGIN } })
+      ).json()) as { members: Array<{ role: string; user: { email: string } }> }
+      expect(after.members.find((m) => m.user.email === memberEmail)?.role).toBe("admin")
+    })
+
+    it("lists pending invitations for the invited user", async () => {
+      const inviterCookie = await signUp("listowner")
+      const orgRes = await fetch("/api/auth/organization/create", {
+        method: "POST",
+        headers: { "content-type": "application/json", cookie: inviterCookie, origin: ORIGIN },
+        body: JSON.stringify({ name: "List Org", slug: `list-${stamp}` }),
+      })
+      const org = (await orgRes.json()) as { id: string }
+
+      const inviteeEmail = email("listinvitee")
+      await fetch("/api/auth/organization/invite-member", {
+        method: "POST",
+        headers: { "content-type": "application/json", cookie: inviterCookie, origin: ORIGIN },
+        body: JSON.stringify({ email: inviteeEmail, role: "member", organizationId: org.id }),
+      })
+
+      const inviteeCookie = await signUpEmail(inviteeEmail, "List Invitee")
+      const list = (await (
+        await fetch("/api/auth/organization/list-user-invitations", {
+          headers: { cookie: inviteeCookie, origin: ORIGIN },
+        })
+      ).json()) as Array<{ email: string; status: string; organizationName?: string }>
+      expect(list.some((i) => i.email === inviteeEmail && i.status === "pending")).toBe(true)
+    })
   })
 }

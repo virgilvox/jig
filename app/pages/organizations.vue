@@ -8,6 +8,8 @@
       </p>
     </div>
 
+    <MyInvitations @changed="load" />
+
     <UiCard title="Create an organization">
       <form class="flex items-end gap-2" @submit.prevent="create">
         <div class="flex-1">
