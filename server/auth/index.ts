@@ -1,0 +1,64 @@
+import { betterAuth } from "better-auth"
+import { drizzleAdapter } from "better-auth/adapters/drizzle"
+import { passkey } from "@better-auth/passkey"
+import { db } from "../db/client"
+import * as schema from "../db/schema"
+import { sendEmail } from "./email"
+
+const baseURL = process.env.BETTER_AUTH_URL ?? "http://localhost:3000"
+
+type OAuthCredentials = { clientId: string; clientSecret: string }
+
+// A provider only switches on when both halves of its key pair are present,
+// so a clone with no OAuth config still boots with email and password working.
+function socialProviders(): Record<string, OAuthCredentials> {
+  const providers: Record<string, OAuthCredentials> = {}
+  const env = process.env
+
+  if (env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET) {
+    providers.github = { clientId: env.GITHUB_CLIENT_ID, clientSecret: env.GITHUB_CLIENT_SECRET }
+  }
+  if (env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET) {
+    providers.google = { clientId: env.GOOGLE_CLIENT_ID, clientSecret: env.GOOGLE_CLIENT_SECRET }
+  }
+  return providers
+}
+
+export const auth = betterAuth({
+  baseURL,
+  secret: process.env.BETTER_AUTH_SECRET,
+  database: drizzleAdapter(db, { provider: "pg", schema }),
+  plugins: [
+    // WebAuthn passkeys. rpID is the domain the credential is bound to; it is
+    // the hostname of the base URL, so localhost in dev and your domain in prod.
+    passkey({ rpName: "JIG", rpID: new URL(baseURL).hostname, origin: baseURL }),
+  ],
+  emailAndPassword: {
+    enabled: true,
+    // Off by default so a fresh clone signs in immediately. Set
+    // REQUIRE_EMAIL_VERIFICATION=true (with Resend configured) to enforce it.
+    requireEmailVerification: process.env.REQUIRE_EMAIL_VERIFICATION === "true",
+    sendResetPassword: async ({ user, url }) => {
+      await sendEmail({
+        to: user.email,
+        subject: "Reset your password",
+        body: `Reset your password: ${url}`,
+      })
+    },
+  },
+  emailVerification: {
+    sendOnSignUp: true,
+    autoSignInAfterVerification: true,
+    sendVerificationEmail: async ({ user, url }) => {
+      await sendEmail({
+        to: user.email,
+        subject: "Verify your email",
+        body: `Verify your email: ${url}`,
+      })
+    },
+  },
+  socialProviders: socialProviders(),
+})
+
+export type Auth = typeof auth
+export type SessionUser = typeof auth.$Infer.Session.user
