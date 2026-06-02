@@ -126,8 +126,10 @@ After a meaningful work session, write or update `docs/sessions/NNN-description.
 
 ### Testing
 
-- Vitest for unit and component tests, run with `npm run test`.
-- Integration tests that touch auth or the database run against a real Postgres started by `docker-compose up db`, not mocks. Point `DATABASE_URL` at it and run migrations first.
+- Vitest. `test/unit` for pure logic, `test/components` for component rendering (both via `npm run test`, no infrastructure). `test/e2e` for integration.
+- The e2e suite boots the real Nitro server and talks to a real Postgres, no mocks. Run it with a database up: `docker compose up -d db`, then `DATABASE_URL=... BETTER_AUTH_SECRET=... DISABLE_RATE_LIMIT=true npm run test:e2e`. It applies migrations itself, and skips when `DATABASE_URL` is unset so `npm run test` stays infrastructure-free.
+- `BETTER_AUTH_SECRET` is required for e2e because it runs a production build, which refuses to boot without one. `DISABLE_RATE_LIMIT` is a test-only escape hatch, never set in production.
+- CI (`.github/workflows/ci.yml`) runs lint, typecheck, unit and component tests, build, then e2e against a Postgres service.
 
 ### Publishing
 

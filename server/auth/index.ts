@@ -57,6 +57,10 @@ export const auth = betterAuth({
       })
     },
   },
+  // Rate limiting is on by default in production. Tests run many sign-ups from
+  // one host, which the limiter would (correctly) block, so they set
+  // DISABLE_RATE_LIMIT. Never set it in production.
+  rateLimit: process.env.DISABLE_RATE_LIMIT === "true" ? { enabled: false } : undefined,
   emailVerification: {
     sendOnSignUp: true,
     autoSignInAfterVerification: true,

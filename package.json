@@ -5,7 +5,7 @@
   "license": "MIT",
   "author": "Moheeb Zara <hackbuildvideo@gmail.com>",
   "engines": {
-    "node": ">=20.11.0"
+    "node": ">=20.12.0"
   },
   "scripts": {
     "dev": "nuxt dev",
@@ -19,11 +19,12 @@
     "format:check": "prettier --check .",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "vitest run --config vitest.e2e.config.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "db:seed": "node --env-file-if-exists=.env --import tsx server/db/seed.ts",
+    "db:seed": "tsx server/db/seed.ts",
     "auth:schema": "better-auth generate --output server/db/auth.schema.ts"
   },
   "dependencies": {

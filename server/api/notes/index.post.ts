@@ -1,6 +1,7 @@
 import { db } from "../../db/client"
 import { notes } from "../../db/schema"
 import { requireUser } from "../../utils/session"
+import { assertOwnedCategory } from "../../utils/categories"
 
 export default defineEventHandler(async (event) => {
   const user = await requireUser(event)
@@ -14,6 +15,11 @@ export default defineEventHandler(async (event) => {
   const text = typeof body?.body === "string" ? body.body : ""
   const categoryId =
     typeof body?.categoryId === "string" && body.categoryId.length > 0 ? body.categoryId : null
+
+  // A note can only point at a category the same user owns.
+  if (categoryId) {
+    await assertOwnedCategory(categoryId, user.id)
+  }
 
   const [created] = await db
     .insert(notes)

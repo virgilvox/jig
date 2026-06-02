@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { THEMES } from "../app/composables/useTheme"
+import { THEMES } from "../../app/composables/useTheme"
 
 // The three shipped aesthetics. Adding one is a new theme file plus a name
 // here; this test is the reminder that the two stay in sync.

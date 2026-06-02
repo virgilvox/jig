@@ -53,14 +53,6 @@ const creating = ref(false)
 
 const previewSlug = computed<string>(() => slugify(name.value))
 
-function slugify(value: string): string {
-  return value
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-}
-
 async function load(): Promise<void> {
   const { data } = await authClient.organization.list()
   orgs.value = data ?? []

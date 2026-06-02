@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm"
 import { db } from "../../db/client"
 import { notes, type NewNote } from "../../db/schema"
 import { requireUser } from "../../utils/session"
+import { assertOwnedCategory } from "../../utils/categories"
 
 export default defineEventHandler(async (event) => {
   const user = await requireUser(event)
@@ -18,6 +19,9 @@ export default defineEventHandler(async (event) => {
   if ("categoryId" in (body ?? {})) {
     patch.categoryId =
       typeof body.categoryId === "string" && body.categoryId ? body.categoryId : null
+    if (patch.categoryId) {
+      await assertOwnedCategory(patch.categoryId, user.id)
+    }
   }
 
   const [updated] = await db

@@ -71,7 +71,24 @@ Three ship pre-built: `punk-zine`, `industrial`, `paper-teal`. Adding a fourth i
 | `npm run db:seed`                   | Insert sample data                   |
 | `npm run lint` / `npm run format`   | Lint and format                      |
 | `npm run typecheck`                 | Type check                           |
-| `npm run test`                      | Run tests                            |
+| `npm run test`                      | Unit and component tests             |
+| `npm run test:e2e`                  | Integration tests (needs Postgres)   |
+
+## Testing
+
+`npm run test` runs the unit and component suites in the Nuxt environment, no infrastructure needed.
+
+The integration suite boots the real server and a real Postgres, no mocks. With a database up:
+
+```bash
+docker compose up -d db
+DATABASE_URL=postgres://jig:jig@localhost:5432/jig \
+  BETTER_AUTH_SECRET=$(openssl rand -base64 32) \
+  DISABLE_RATE_LIMIT=true \
+  npm run test:e2e
+```
+
+It applies migrations itself and skips when `DATABASE_URL` is unset. CI runs all of this against a Postgres service on every push.
 
 ## Deploy
 
